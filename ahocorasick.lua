@@ -50,13 +50,13 @@ function stringutf8.toCharArray(str)
         local i, j = 1, 1
         while i <= length do
             local firstByte = string.byte(str, i)
-            if firstByte >=0 and firstByte < 128 then
+            if firstByte >= 0 and firstByte < 128 then
                 byteLength = 1
-            elseif firstByte >191 and firstByte < 224 then
+            elseif firstByte > 191 and firstByte < 224 then
                 byteLength = 2
-            elseif firstByte >223 and firstByte < 240 then
+            elseif firstByte > 223 and firstByte < 240 then
                 byteLength = 3
-            elseif firstByte >239 and firstByte < 248 then
+            elseif firstByte > 239 and firstByte < 248 then
                 byteLength = 4
             end
 
@@ -134,29 +134,6 @@ function arrays.binarySearch(array, fromIndex, toIndex, item)
     return -low
 end
 
-local function isarray(t)
-    if not t then
-        return false
-    end
-
-    if type(t) ~= "table" then
-        return false
-    end
-
-    local n = #t
-    for i, _ in pairs(t) do
-        if type(i) ~= "number" then
-            return false
-        end
-
-        if i > n then
-            return false
-        end
-    end
-
-    return true
-end
-
 local function nkeys(t)
     local length = 0
     if t then
@@ -184,6 +161,7 @@ function _TrieNode:new(word, depth)
     local t = {
             word = word,
             children = nil,
+            isChildrenArray = false,
             isEnd = false,
             count = 1,
             fail = nil,
@@ -241,14 +219,17 @@ function _Trie:addNodes(str)
             end
 
             current.children = children
+            current.isChildrenArray = true
         else
-            if storedSize > 0 and isarray(children) then
+            local isArray = current.isChildrenArray
+            if storedSize > 0 and isArray then
                 local newChildren = newtab(0, self.childrenArrayLimit + 1)
                 for _, v in ipairs(children) do
                     newChildren[v.word] = v
                 end
                 --current.children = newChildren
                 children = newChildren
+                current.isChildrenArray = false
             end
 
             node = children[word]
@@ -278,7 +259,8 @@ function _Trie:contains(str)
     for _, word in ipairs(array) do
         children = current.children
         if children then
-            if isarray(children) then
+            local isArray = current.isChildrenArray
+            if isArray then
                 local storedSize = nkeys(children)
                 local pos = arrays.binarySearch(children, 1, storedSize, _TrieNode:new(word))
 
@@ -332,7 +314,8 @@ local function getFail(self, childNode, fatherFail)
     local fail
     local children = fatherFail.children
     if children then
-        if isarray(children) then
+        local isArray = fatherFail.isChildrenArray
+        if isArray then
             local storedSize = nkeys(children)
             local pos = arrays.binarySearch(children, 1, storedSize, childNode)
             if pos > 0 then
@@ -437,7 +420,8 @@ function _AhoCorasick:match(str, simpleMode)
         while true do
             local children = current.children
             if children then
-                if isarray(children) then
+                local isArray = current.isChildrenArray
+                if isArray then
                     local pos = arrays.binarySearch(children, 1, nkeys(children), _TrieNode:new(word))
                     if pos > 0 then
                         current = children[pos]
